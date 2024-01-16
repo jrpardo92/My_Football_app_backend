@@ -8,6 +8,8 @@ import (
 
 // InitializeRoutes configura las rutas para la aplicación
 func InitializeRoutes(e *echo.Echo) {
+
+	//RUTAS USUARIO
 	// Ruta para la página de inicio
 	e.GET("/", handlers.HomeHandler)
 
@@ -22,4 +24,10 @@ func InitializeRoutes(e *echo.Echo) {
 
 	// Ruta para eliminar un usuario
 	e.DELETE("/users/:id", handlers.DeleteUserHandler)
+
+	// RUTAS PARTIDO
+	// Ruta para ver todos los partidos
+	e.GET("/matches", handlers.GetMatchesHandler)
+	// Ruta para crear un partido
+	e.POST("/matches", handlers.CreateMatchHandler)
 }
