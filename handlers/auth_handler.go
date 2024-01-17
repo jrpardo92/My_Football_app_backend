@@ -56,6 +56,7 @@ func LoginHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
 		"mensaje": "Inicio de sesión exitoso",
 		"token":   tokenString,
+		"userID":  user.UsuarioID,
 	})
 }
 
