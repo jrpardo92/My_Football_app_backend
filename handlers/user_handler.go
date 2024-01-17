@@ -160,3 +160,29 @@ func DeleteUserHandler(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, "Usuario eliminado con éxito")
 }
+
+// GetUserHandler maneja las solicitudes para obtener la información de un usuario específico
+func GetUserHandler(c echo.Context) error {
+	userID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, "ID de usuario inválido")
+	}
+
+	db, err := config.GetDBConnection()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, "Error de conexión a la base de datos")
+	}
+	defer db.Close()
+
+	var user models.User
+	query := `SELECT UsuarioID, Nombre, Edad, CiudadResidencia, CorreoElectronico FROM Usuarios WHERE UsuarioID = $1`
+	row := db.QueryRow(query, userID)
+	err = row.Scan(&user.UsuarioID, &user.Nombre, &user.Edad, &user.CiudadResidencia, &user.CorreoElectronico)
+	if err == sql.ErrNoRows {
+		return c.JSON(http.StatusNotFound, "Usuario no encontrado")
+	} else if err != nil {
+		return c.JSON(http.StatusInternalServerError, "Error al consultar el usuario")
+	}
+
+	return c.JSON(http.StatusOK, user)
+}

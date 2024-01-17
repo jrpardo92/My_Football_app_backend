@@ -28,6 +28,10 @@ func InitializeRoutes(e *echo.Echo) {
 	// RUTAS PARTIDO
 	// Ruta para ver todos los partidos
 	e.GET("/matches", handlers.GetMatchesHandler)
+
 	// Ruta para crear un partido
 	e.POST("/matches", handlers.CreateMatchHandler)
+
+	// Ruta para obtener información de un usuario
+	e.GET("/users/:id", handlers.GetUserHandler)
 }
