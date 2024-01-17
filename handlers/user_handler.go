@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // GetUsersHandler para la lectura de usuarios
@@ -57,50 +58,6 @@ func GetUsersHandler(c echo.Context) error {
 
 	// Enviar los usuarios como respuesta JSON
 	return c.JSON(http.StatusOK, users)
-}
-
-// RegisterUserHandler maneja el registro de nuevos usuarios
-func RegisterUserHandler(c echo.Context) error {
-	// Instancia para los datos del usuario
-	newUser := new(models.User)
-	if err := c.Bind(newUser); err != nil {
-		return c.String(http.StatusBadRequest, "Datos inválidos")
-	}
-	// Log para depuración
-	c.Echo().Logger.Info(fmt.Sprintf("Datos recibidos: %+v", newUser))
-
-	// Validar datos del usuario (aquí puedes agregar más validaciones según sea necesario)
-	if newUser.Nombre == "" || newUser.CorreoElectronico == "" {
-		return c.String(http.StatusBadRequest, "Faltan datos requeridos")
-	}
-
-	// Conexión a la base de datos
-	db, err := config.GetDBConnection()
-	if err != nil {
-		return c.String(http.StatusInternalServerError, "Error al conectar con la base de datos")
-	}
-	defer db.Close()
-
-	// Verificar si el correo electrónico ya está registrado
-	var id int
-	err = db.QueryRow("SELECT UsuarioID FROM Usuarios WHERE CorreoElectronico = $1", newUser.CorreoElectronico).Scan(&id)
-	if err == nil {
-		return c.String(http.StatusConflict, "El correo electrónico ya está registrado")
-	} else if err != sql.ErrNoRows {
-		c.Echo().Logger.Error("Error al verificar el correo electrónico: ", err)
-		return c.String(http.StatusInternalServerError, "Error al verificar el correo electrónico")
-	}
-
-	// Insertar usuario en la base de datos
-	query := `INSERT INTO Usuarios (Nombre, Edad, CiudadResidencia, CorreoElectronico, Contraseña) VALUES ($1, $2, $3, $4, $5)`
-	_, err = db.Exec(query, newUser.Nombre, newUser.Edad, newUser.CiudadResidencia, newUser.CorreoElectronico, newUser.Contraseña)
-	if err != nil {
-		//return c.String(http.StatusInternalServerError, "Error al registrar el usuario")
-		c.Echo().Logger.Error("Error al insertar usuario en la base de datos: ", err)
-		return c.String(http.StatusInternalServerError, "Error al registrar el usuario")
-	}
-
-	return c.String(http.StatusOK, "Usuario registrado con éxito")
 }
 
 // UpdateUserHandler actualiza los detalles de un usuario
@@ -185,4 +142,53 @@ func GetUserHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, user)
+}
+
+// RegisterUserHandler maneja el registro de nuevos usuarios
+func RegisterUserHandler(c echo.Context) error {
+	// Instancia para los datos del usuario
+	newUser := new(models.User)
+	if err := c.Bind(newUser); err != nil {
+		return c.String(http.StatusBadRequest, "Datos inválidos")
+	}
+	// Log para depuración
+	c.Echo().Logger.Info(fmt.Sprintf("Datos recibidos: %+v", newUser))
+
+	// Validar datos del usuario
+	if newUser.Nombre == "" || newUser.CorreoElectronico == "" {
+		return c.String(http.StatusBadRequest, "Faltan datos requeridos")
+	}
+
+	// Conexión a la base de datos
+	db, err := config.GetDBConnection()
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "Error al conectar con la base de datos")
+	}
+	defer db.Close()
+
+	// Verificar si el correo electrónico ya está registrado
+	var id int
+	err = db.QueryRow("SELECT UsuarioID FROM Usuarios WHERE CorreoElectronico = $1", newUser.CorreoElectronico).Scan(&id)
+	if err == nil {
+		return c.String(http.StatusConflict, "El correo electrónico ya está registrado")
+	} else if err != sql.ErrNoRows {
+		c.Echo().Logger.Error("Error al verificar el correo electrónico: ", err)
+		return c.String(http.StatusInternalServerError, "Error al verificar el correo electrónico")
+	}
+	// Hashear la contraseña
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Contraseña), bcrypt.DefaultCost)
+	if err != nil {
+		c.Echo().Logger.Error("Error al hashear la contraseña: ", err)
+		return c.String(http.StatusInternalServerError, "Error al procesar la contraseña")
+	}
+
+	// Insertar usuario en la base de datos con la contraseña hasheada
+	query := `INSERT INTO Usuarios (Nombre, Edad, CiudadResidencia, CorreoElectronico, Contraseña) VALUES ($1, $2, $3, $4, $5)`
+	_, err = db.Exec(query, newUser.Nombre, newUser.Edad, newUser.CiudadResidencia, newUser.CorreoElectronico, string(hashedPassword))
+	if err != nil {
+		c.Echo().Logger.Error("Error al insertar usuario en la base de datos: ", err)
+		return c.String(http.StatusInternalServerError, "Error al registrar el usuario")
+	}
+
+	return c.String(http.StatusOK, "Usuario registrado con éxito")
 }

@@ -34,4 +34,7 @@ func InitializeRoutes(e *echo.Echo) {
 
 	// Ruta para obtener información de un usuario
 	e.GET("/users/:id", handlers.GetUserHandler)
+
+	// Ruta para login
+	e.POST("/login", handlers.LoginHandler)
 }
